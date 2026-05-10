@@ -2,72 +2,339 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>标准查询系统</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级标准批量查询系统</title>
     <style>
-        *{box-sizing:border-box;margin:0;padding:0;font-family:Microsoft YaHei,sans-serif}
-        body{background:#f5f7fa;padding:20px}
-        .container{max-width:1000px;margin:0 auto;background:white;padding:25px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
-        .title{text-align:center;color:#2c3e50;margin-bottom:20px}
-        .search-box{width:100%;padding:12px 15px;font-size:16px;border:2px solid #3498db;border-radius:8px;outline:none;margin-bottom:20px}
-        .result-count{color:#7f8c8d;margin-bottom:10px}
-        .item{padding:15px;border-bottom:1px solid #eee}
-        .no-result{color:#e74c3c;text-align:center;padding:30px}
-        .label{color:#3498db;font-weight:bold}
+        *{box-sizing:border-box;margin:0;padding:0;font-family:"Microsoft YaHei", "Microsoft Sans Serif", sans-serif}
+        body{background:#f0f2f5;padding:30px;min-height:100vh}
+        .container{max-width:1200px;margin:0 auto;background:#ffffff;padding:35px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #eee}
+        .title{text-align:center;color:#1f2937;font-size:24px;font-weight:600;margin-bottom:30px;padding-bottom:15px;border-bottom:1px solid #f5f5f5}
+        
+        /* 功能工具栏 - 企业级样式 */
+        .tool-box{display:flex;gap:15px;margin-bottom:25px;flex-wrap:wrap;align-items:center}
+        .btn{padding:11px 20px;border:none;border-radius:8px;cursor:pointer;font-size:15px;font-weight:500;transition:all 0.3s ease;display:flex;align-items:center;gap:6px}
+        .btn i{font-style:normal}
+        .btn-primary{background:#165DFF;color:white}
+        .btn-primary:hover{background:#0E4BDB;box-shadow:0 2px 8px rgba(22, 93, 255, 0.3)}
+        .btn-success{background:#00B42A;color:white}
+        .btn-success:hover{background:#00A126;box-shadow:0 2px 8px rgba(0, 180, 42, 0.3)}
+        .btn-export{background:#722ED1;color:white}
+        .btn-export:hover{background:#6326C4;box-shadow:0 2px 8px rgba(114, 46, 209, 0.3)}
+        .file-input{display:none}
+        .tool-tips{margin-left:auto;color:#666;font-size:13px}
+        
+        /* 单条搜索框 - 企业级美化 */
+        .search-container{position:relative;margin-bottom:25px}
+        .search-box{width:100%;padding:14px 20px 14px 45px;font-size:16px;border:1px solid #e5e7eb;border-radius:8px;outline:none;transition:border-color 0.3s ease}
+        .search-box:focus{border-color:#165DFF;box-shadow:0 0 0 3px rgba(22, 93, 255, 0.1)}
+        .search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#999}
+        
+        /* 结果统计 */
+        .result-count{color:#333;font-size:14px;margin-bottom:15px;font-weight:500;display:flex;align-items:center;gap:8px}
+        .count-highlight{color:#165DFF;font-weight:600}
+        
+        /* 单条查询结果 - 美化+高亮 */
+        .result-container{margin-bottom:30px}
+        .item{padding:20px;border-radius:8px;border:1px solid #f5f5f5;margin-bottom:15px;transition:all 0.3s ease;background:#fafafa}
+        .item:hover{border-color:#e0e0e0;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
+        .label{color:#165DFF;font-weight:600;display:inline-block;width:120px;vertical-align:top}
+        .content{color:#333;line-height:1.6}
+        .highlight{background:#FFF6CC;padding:2px 4px;border-radius:3px;color:#E67700;font-weight:500}
+        .no-result{color:#F53F3F;text-align:center;padding:40px;border:1px dashed #ffd1d1;border-radius:8px;background:#fff8f8;margin:20px 0}
+        
+        /* 批量查询结果 - 表格美化+高亮 */
+        .table-box{overflow-x:auto;margin-top:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+        table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden}
+        th{background:#F7F8FA;color:#1f2937;font-weight:600;padding:14px 20px;text-align:left;border-bottom:2px solid #e5e7eb}
+        td{padding:14px 20px;border-bottom:1px solid #f5f5f5;transition:background 0.3s ease}
+        tr:hover td{background:#fafafa}
+        .hit{color:#00B42A;font-weight:600}
+        .miss{color:#F53F3F;font-weight:600}
+        .hit-row{background:#F0FFF4 !important}
+        .hit-row td{border-color:#E6FFEF}
+        
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .tool-box{justify-content:center}
+            .tool-tips{margin-left:0;margin-top:10px}
+            .label{width:100px}
+            th,td{padding:12px 15px}
+            .container{padding:25px}
+            .title{font-size:20px}
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2 class="title">国家标准/行业标准 查询系统</h2>
-        <input type="text" class="search-box" id="search" placeholder="输入标准号、名称、关键词搜索..." autocomplete="off">
-        <div class="result-count" id="count"></div>
-        <div id="result"></div>
-    </div>
+<div class="container">
+    <h2 class="title"&gt;企业级标准批量查询系统&lt;/h2&gt;
 
-    <script>
-        // 读取标准库数据
-        let standards = [];
-        fetch("standards.json")
-            .then(res => res.json())
-            .then(data => {
-                standards = data;
-                showResult(standards);
-            })
-            .catch(err => console.error("加载数据失败", err));
+    <!-- 功能按钮：下载模版 + 上传Excel + 导出结果 -->
+    <div class="tool-box">
+        <button class="btn btn-primary" id="downloadTemplate"><i>📥</i> 下载Excel查询模板</button>
+        <label class="btn btn-success">
+            <input type="file" id="uploadExcel" class="file-input" accept=".xlsx,.xls">
+            <i>📤</i> 上传Excel批量查询
+        </label>
+        <button class="btn btn-export" id="exportResult" disabled><i>📋</i> 导出查询结果</button>
+        <span class="tool-tips">批量查询：标准编号精准匹配，支持GB/GB/T/DB自动格式化&lt;/span&gt;
+    &lt;/div&gt;
 
-        // 搜索事件
-        document.getElementById("search").addEventListener("input", function(){
-            const key = this.value.trim().toLowerCase();
-            if(!key){
-                showResult(standards);
-                return;
-            }
-            const filter = standards.filter(item => 
-                JSON.stringify(item).toLowerCase().includes(key)
-            );
-            showResult(filter);
-        });
+    <!-- 单条搜索（带图标） -->
+    <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-box" id="search" placeholder="单条查询：输入标准编号/名称/领域关键词搜索..." autocomplete="off"&gt;
+    &lt;/div&gt;
 
-        // 渲染结果
-        function showResult(list){
-            const count = document.getElementById("count");
-            const result = document.getElementById("result");
-            count.innerText = `共找到 ${list.length} 条标准`;
-            
-            if(list.length === 0){
-                result.innerHTML = `<div class="no-result">未找到匹配标准</div>`;
-                return;
-            }
+    <!-- 结果统计 -->
+    <div class="result-count" id="count">共找到 <span class="count-highlight"&gt;0&lt;/span&gt; 条标准&lt;/div&gt;
 
-            let html = "";
-            list.forEach(item => {
-                html += `<div class="item">`;
-                for(let key in item){
-                    html += `<p><span class="label">${key}：</span>${item[key]}</p>`;
+    <!-- 结果展示区域 -->
+    <div class="result-container" id="result"></div>
+&lt;/div&gt;
+
+<!-- 依赖：处理Excel文件（CDN引入，无需本地下载） -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// 全局变量：标准库数据、当前批量查询结果（用于导出）
+let standards = [];
+let batchResult = [];
+
+// 1. 加载标准库数据（JSON文件，从.db转换而来）
+fetch("standards.json")
+    .then(res => res.json())
+    .then(data => {
+        standards = data;
+        showResult(standards);
+    })
+    .catch(err => {
+        console.error("标准库数据加载失败", err);
+        document.getElementById("result").innerHTML = '<div class="no-result">标准库加载失败，请检查standards.json文件是否存在</div>';
+    });
+
+// 2. 单条搜索（支持关键词高亮）
+document.getElementById("search").addEventListener("input", function () {
+    const key = this.value.trim().toLowerCase();
+    let filtered = [];
+    
+    if (!key) {
+        filtered = standards;
+    } else {
+        // 过滤匹配结果（适配所有字段：领域、标准(方法)名称、标准编号(含年号)、备注）
+        filtered = standards.filter(item => 
+            JSON.stringify(item).toLowerCase().includes(key)
+        );
+    }
+    
+    // 显示结果（带关键词高亮）
+    showResult(filtered, key);
+});
+
+// 3. 下载Excel查询模板（企业级规范模板）
+document.getElementById("downloadTemplate").addEventListener("click", () => {
+    const wb = XLSX.utils.book_new();
+    // 模板格式：仅一列（标准编号(含年号)），带提示说明
+    const data = [
+        ["标准编号(含年号)"],
+        ["提示：仅填写此列，支持GB、GB/T、DB格式，自动格式化"],
+        ["示例1：GB 1234-2020"],
+        ["示例2：gb/t 5678-2019"],
+        ["示例3：db31/t 900-2021"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    // 美化模板：设置列宽
+    ws["!cols"] = [{ wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, ws, "标准查询模板");
+    // 下载模板（文件名带企业标识）
+    XLSX.writeFile(wb, "企业标准查询模板.xlsx");
+});
+
+// 4. 上传Excel批量查询（精准匹配+标准号自动格式化）
+document.getElementById("uploadExcel").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = new Uint8Array(ev.target.result);
+            const wb = XLSX.read(data, { type: "array" });
+            const firstSheet = wb.Sheets[wb.SheetNames[0]];
+            // 读取Excel数据（跳过表头，仅取第一列）
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+            // 提取标准编号列表 + 自动格式化
+            const codeList = [];
+            jsonData.slice(1).forEach(row => {
+                let code = (row[0] || "").trim();
+                if (code) {
+                    // 标准编号自动格式化：统一GB/GB/T/DB格式，去除多余空格、小写转大写
+                    code = formatStandardCode(code);
+                    codeList.push(code);
                 }
-                html += `</div><hr>`;
             });
-            result.innerHTML = html;
+
+            // 去重（避免重复查询）
+            const uniqueCodeList = [...new Set(codeList)];
+            // 精准匹配查询（匹配字段：标准编号(含年号)）
+            batchResult = batchSearch(uniqueCodeList);
+            // 显示批量结果（带匹配高亮）
+            showBatchResult(batchResult);
+            // 启用导出按钮
+            document.getElementById("exportResult").disabled = false;
+        } catch (err) {
+            alert("Excel解析失败，请检查文件格式（仅支持.xlsx/.xls）");
+            console.error("Excel解析错误", err);
         }
-    </script>
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+// 5. 批量查询结果导出Excel
+document.getElementById("exportResult").addEventListener("click", () => {
+    if (batchResult.length === 0) {
+        alert("暂无查询结果可导出");
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    // 整理导出数据（表头+内容，适配你的字段）
+    const exportData = [
+        ["序号", "标准编号(含年号)", "匹配状态", "领域", "标准(方法)名称", "备注"],
+        ...batchResult.map((item, index) => [
+            index + 1,
+            item["标准编号(含年号)"],
+            item.状态,
+            item.领域,
+            item["标准(方法)名称"],
+            item.备注
+        ])
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(exportData);
+    // 美化导出表格：设置列宽
+    ws["!cols"] = [
+        { wch: 6 },  // 序号
+        { wch: 25 }, // 标准编号(含年号)
+        { wch: 12 }, // 匹配状态
+        { wch: 20 }, // 领域
+        { wch: 40 }, // 标准(方法)名称
+        { wch: 30 }  // 备注
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, "标准查询结果");
+    // 下载导出文件（带时间戳，避免重复）
+    const time = new Date().toLocaleString().replace(/[/:\s]/g, "-");
+    XLSX.writeFile(wb, `标准批量查询结果_${time}.xlsx`);
+});
+
+// 核心函数1：标准编号自动格式化（GB/GB/T/DB）
+function formatStandardCode(code) {
+    // 1. 转大写、去除所有空格
+    code = code.toUpperCase().replace(/\s+/g, "");
+    // 2. 匹配GB、GB/T、DB格式，统一规范（如gb1234→GB 1234，gb/t5678→GB/T 5678）
+    if (code.match(/^GBT/)) {
+        code = code.replace(/^GBT/, "GB/T ");
+    } else if (code.match(/^GB/)) {
+        code = code.replace(/^GB/, "GB ");
+    } else if (code.match(/^DB/)) {
+        // 处理DB（如DB31T→DB31/T，DB11→DB11/）
+        code = code.replace(/^DB(\d+)(T?)/, (match, num, t) => {
+            return `DB${num}${t ? "/T " : " "}`;
+        });
+    }
+    // 3. 处理年份分隔符（如GB12342020→GB 1234-2020）
+    code = code.replace(/(\d{4})(\d{4})$/, "$1-$2");
+    return code.trim();
+}
+
+// 核心函数2：批量精准匹配查询（适配字段：标准编号(含年号)）
+function batchSearch(codeList) {
+    return codeList.map(code => {
+        // 精准匹配（格式化后的标准编号与数据库中标准编号(含年号)完全一致）
+        const hit = standards.find(item =>
+            formatStandardCode(item["标准编号(含年号)"] || "") === code
+        );
+        return {
+            "标准编号(含年号)": code,
+            状态: hit ? "已匹配" : "未找到",
+            领域: hit ? hit.领域 || "-" : "-",
+            "标准(方法)名称": hit ? hit["标准(方法)名称"] : "-",
+            备注: hit ? hit.备注 || "-" : "-"
+        };
+    });
+}
+
+// 核心函数3：显示单条搜索结果（带关键词高亮，适配所有字段）
+function showResult(list, key = "") {
+    const countEl = document.getElementById("count");
+    const resultEl = document.getElementById("result");
+    const count = list.length;
+    
+    // 更新结果统计
+    countEl.innerHTML = `共找到 <span class="count-highlight">${count}</span> 条标准`;
+    
+    // 无结果提示
+    if (count === 0) {
+        resultEl.innerHTML = '<div class="no-result">未找到匹配的标准，请调整关键词重试</div>';
+        return;
+    }
+    
+    // 渲染结果（带关键词高亮，适配所有字段）
+    let html = "";
+    list.forEach(item => {
+        html += '<div class="item">';
+        // 遍历所有字段：领域、标准(方法)名称、标准编号(含年号)、备注
+        for (let keyName in item) {
+            let content = item[keyName] || "-";
+            // 关键词高亮（仅当有搜索关键词时）
+            if (key && content.toString().toLowerCase().includes(key.toLowerCase())) {
+                const reg = new RegExp(key, "gi");
+                content = content.toString().replace(reg, match => 
+                    `<span class="highlight">${match}</span>`
+                );
+            }
+            html += `<p><span class="label">${keyName}：</span><span class="content">${content}</span></p>`;
+        }
+        html += '</div>';
+    });
+    resultEl.innerHTML = html;
+}
+
+// 核心函数4：显示批量查询结果（带匹配高亮，适配所有字段）
+function showBatchResult(list) {
+    const countEl = document.getElementById("count");
+    const resultEl = document.getElementById("result");
+    const total = list.length;
+    const hitCount = list.filter(i => i.状态 === "已匹配").length;
+    
+    // 更新结果统计
+    countEl.innerHTML = `批量查询完成：共 <span class="count-highlight">${total}</span> 条，匹配成功 <span class="count-highlight">${hitCount}</span> 条`;
+    
+    // 渲染表格结果（已匹配行高亮，适配所有字段）
+    let html = `<div class="table-box"><table>
+        <tr>
+            <th>序号</th>
+            <th>标准编号(含年号)</th>
+            <th>匹配状态</th>
+            <th>领域</th>
+            <th>标准(方法)名称</th>
+            <th>备注</th>
+        </tr>`;
+    
+    list.forEach((item, index) => {
+        // 已匹配行添加高亮样式
+        const rowClass = item.状态 === "已匹配" ? "hit-row" : "";
+        html += `<tr class="${rowClass}">
+            <td>${index + 1}</td>
+            <td>${item["标准编号(含年号)"]}</td>
+            <td class="${item.状态 === "已匹配" ? "hit" : "miss"}">${item.状态}</td>
+            <td>${item.领域}</td>
+            <td>${item["标准(方法)名称"]}</td>
+            <td>${item.备注}</td>
+        </tr>`;
+    });
+    
+    html += `</table></div>`;
+    resultEl.innerHTML = html;
+}
+</script>
 </body>
 </html>
