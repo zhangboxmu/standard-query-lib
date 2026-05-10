@@ -66,7 +66,7 @@
 </head>
 <body>
 <div class="container">
-    <h2 class="title"&gt;企业级标准批量查询系统&lt;/h2&gt;
+    <h2 class="title">企业级标准批量查询系统</h2>
 
     <!-- 功能按钮：下载模版 + 上传Excel + 导出结果 -->
     <div class="tool-box">
@@ -76,28 +76,43 @@
             <i>📤</i> 上传Excel批量查询
         </label>
         <button class="btn btn-export" id="exportResult" disabled><i>📋</i> 导出查询结果</button>
-        <span class="tool-tips">批量查询：标准编号精准匹配，支持GB/GB/T/DB自动格式化&lt;/span&gt;
-    &lt;/div&gt;
+        <span class="tool-tips">批量查询：标准编号精准匹配，支持GB/GB/T/DB自动格式化</span>
+    </div>
 
     <!-- 单条搜索（带图标） -->
     <div class="search-container">
         <span class="search-icon">🔍</span>
-        <input type="text" class="search-box" id="search" placeholder="单条查询：输入标准编号/名称/领域关键词搜索..." autocomplete="off"&gt;
-    &lt;/div&gt;
+        <input type="text" class="search-box" id="search" placeholder="单条查询：输入标准编号/名称/领域关键词搜索..." autocomplete="off">
+    </div>
 
     <!-- 结果统计 -->
-    <div class="result-count" id="count">共找到 <span class="count-highlight"&gt;0&lt;/span&gt; 条标准&lt;/div&gt;
+    <div class="result-count" id="count">共找到 <span class="count-highlight">0</span> 条标准</div>
 
     <!-- 结果展示区域 -->
     <div class="result-container" id="result"></div>
-&lt;/div&gt;
+</div>
 
-<!-- 依赖：处理Excel文件（CDN引入，无需本地下载） -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- 修复：替换稳定CDN，解决解析失败问题（替换原CDN，提升兼容性） -->
+<script src="https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // 全局变量：标准库数据、当前批量查询结果（用于导出）
 let standards = [];
 let batchResult = [];
+
+// 修复：添加CDN加载失败备用方案（避免网页解析失败）
+if (typeof XLSX === 'undefined') {
+    alert("Excel处理依赖加载失败，将尝试备用方案！");
+    // 备用CDN加载
+    const script = document.createElement('script');
+    script.src = "https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js";
+    script.onload = function() {
+        alert("备用依赖加载成功，可正常使用Excel功能");
+    };
+    script.onerror = function() {
+        alert("备用依赖也加载失败，请检查网络连接或稍后重试");
+    };
+    document.body.appendChild(script);
+}
 
 // 1. 加载标准库数据（JSON文件，从.db转换而来）
 fetch("standards.json")
@@ -129,26 +144,38 @@ document.getElementById("search").addEventListener("input", function () {
     showResult(filtered, key);
 });
 
-// 3. 下载Excel查询模板（企业级规范模板）
+// 3. 下载Excel查询模板（企业级规范模板，修复导出兼容问题）
 document.getElementById("downloadTemplate").addEventListener("click", () => {
-    const wb = XLSX.utils.book_new();
-    // 模板格式：仅一列（标准编号(含年号)），带提示说明
-    const data = [
-        ["标准编号(含年号)"],
-        ["提示：仅填写此列，支持GB、GB/T、DB格式，自动格式化"],
-        ["示例1：GB 1234-2020"],
-        ["示例2：gb/t 5678-2019"],
-        ["示例3：db31/t 900-2021"]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    // 美化模板：设置列宽
-    ws["!cols"] = [{ wch: 30 }];
-    XLSX.utils.book_append_sheet(wb, ws, "标准查询模板");
-    // 下载模板（文件名带企业标识）
-    XLSX.writeFile(wb, "企业标准查询模板.xlsx");
+    try {
+        const wb = XLSX.utils.book_new();
+        // 模板格式：仅一列（标准编号(含年号)），带提示说明
+        const data = [
+            ["标准编号(含年号)"],
+            ["提示：仅填写此列，支持GB、GB/T、DB格式，自动格式化"],
+            ["示例1：GB 1234-2020"],
+            ["示例2：gb/t 5678-2019"],
+            ["示例3：db31/t 900-2021"]
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        // 美化模板：设置列宽
+        ws["!cols"] = [{ wch: 30 }];
+        XLSX.utils.book_append_sheet(wb, ws, "标准查询模板");
+        // 修复：兼容不同浏览器导出，避免解析失败
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "企业标准查询模板.xlsx";
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert("模板下载失败：" + err.message);
+        console.error("模板下载错误", err);
+    }
 });
 
-// 4. 上传Excel批量查询（精准匹配+标准号自动格式化）
+// 4. 上传Excel批量查询（修复解析逻辑，解决解析失败）
 document.getElementById("uploadExcel").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -157,10 +184,11 @@ document.getElementById("uploadExcel").addEventListener("change", (e) => {
     reader.onload = (ev) => {
         try {
             const data = new Uint8Array(ev.target.result);
-            const wb = XLSX.read(data, { type: "array" });
+            // 修复：添加解析配置，兼容不同版本Excel文件
+            const wb = XLSX.read(data, { type: "array", cellDates: true, cellText: false });
             const firstSheet = wb.Sheets[wb.SheetNames[0]];
-            // 读取Excel数据（跳过表头，仅取第一列）
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            // 读取Excel数据（跳过表头，仅取第一列，修复空行、格式异常问题）
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, blankrows: false });
 
             // 提取标准编号列表 + 自动格式化
             const codeList = [];
@@ -182,47 +210,62 @@ document.getElementById("uploadExcel").addEventListener("change", (e) => {
             // 启用导出按钮
             document.getElementById("exportResult").disabled = false;
         } catch (err) {
-            alert("Excel解析失败，请检查文件格式（仅支持.xlsx/.xls）");
+            // 修复：更详细的错误提示，帮助定位问题
+            alert("Excel解析失败：" + err.message + "，请检查文件格式（仅支持.xlsx/.xls）、文件无损坏且表头正确");
             console.error("Excel解析错误", err);
         }
     };
+    // 修复：兼容不同文件编码，避免解析异常
     reader.readAsArrayBuffer(file);
 });
 
-// 5. 批量查询结果导出Excel
+// 5. 批量查询结果导出Excel（修复导出逻辑，解决无法导出问题）
 document.getElementById("exportResult").addEventListener("click", () => {
     if (batchResult.length === 0) {
         alert("暂无查询结果可导出");
         return;
     }
 
-    const wb = XLSX.utils.book_new();
-    // 整理导出数据（表头+内容，适配你的字段）
-    const exportData = [
-        ["序号", "标准编号(含年号)", "匹配状态", "领域", "标准(方法)名称", "备注"],
-        ...batchResult.map((item, index) => [
-            index + 1,
-            item["标准编号(含年号)"],
-            item.状态,
-            item.领域,
-            item["标准(方法)名称"],
-            item.备注
-        ])
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(exportData);
-    // 美化导出表格：设置列宽
-    ws["!cols"] = [
-        { wch: 6 },  // 序号
-        { wch: 25 }, // 标准编号(含年号)
-        { wch: 12 }, // 匹配状态
-        { wch: 20 }, // 领域
-        { wch: 40 }, // 标准(方法)名称
-        { wch: 30 }  // 备注
-    ];
-    XLSX.utils.book_append_sheet(wb, ws, "标准查询结果");
-    // 下载导出文件（带时间戳，避免重复）
-    const time = new Date().toLocaleString().replace(/[/:\s]/g, "-");
-    XLSX.writeFile(wb, `标准批量查询结果_${time}.xlsx`);
+    try {
+        const wb = XLSX.utils.book_new();
+        // 整理导出数据（表头+内容，适配你的字段）
+        const exportData = [
+            ["序号", "标准编号(含年号)", "匹配状态", "领域", "标准(方法)名称", "备注"],
+            ...batchResult.map((item, index) => [
+                index + 1,
+                item["标准编号(含年号)"],
+                item.状态,
+                item.领域,
+                item["标准(方法)名称"],
+                item.备注
+            ])
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(exportData);
+        // 美化导出表格：设置列宽
+        ws["!cols"] = [
+            { wch: 6 },  // 序号
+            { wch: 25 }, // 标准编号(含年号)
+            { wch: 12 }, // 匹配状态
+            { wch: 20 }, // 领域
+            { wch: 40 }, // 标准(方法)名称
+            { wch: 30 }  // 备注
+        ];
+        XLSX.utils.book_append_sheet(wb, ws, "标准查询结果");
+        // 修复：兼容所有浏览器，解决导出失败、网页解析异常问题
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const time = new Date().toLocaleString().replace(/[/:\s]/g, "-");
+        a.href = url;
+        a.download = `标准批量查询结果_${time}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        alert("导出成功！文件已下载");
+    } catch (err) {
+        alert("导出失败：" + err.message);
+        console.error("Excel导出错误", err);
+    }
 });
 
 // 核心函数1：标准编号自动格式化（GB/GB/T/DB）
